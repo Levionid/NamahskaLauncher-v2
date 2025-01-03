@@ -8,8 +8,30 @@
     %sveltekit.head%
   </head>
   <style>
-    * {
+    @font-face {
+      font-family: 'Inter';
+      src: url('/fonts/Inter-Regular.woff2') format('woff2'),
+          url('/fonts/Inter-Regular.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    :root {
+      --black: #101010;
+      --black-2: #121212;
+      --gray: #4A4A4A;
+      --gray-light: #7A7A7A;
+      --red: #e81123;
+      --green: #4CAF50;
+      --green-light: #5fb962;
+
+      user-select: none;
+    }
+
+    body {
       margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--black);
     }
   </style>
   <body data-sveltekit-preload-data="hover">
