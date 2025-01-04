@@ -1,21 +1,23 @@
 <script lang="ts">
-  import noTexture from '$lib/images/no-texture.png';
+  import modpackImage from '$lib/images/modpack-image.png';
   import PackDetails from './PackDetails.svelte';
 
   export let pack: any;
 </script>
 
-<div class="content-body">
-    <div class="modpack-caption" style="background-image: url({noTexture})">
-        <p>Namashka Craft</p>
-    </div>
-    <PackDetails pack={pack} />
+<div class="content-body" style="background-image: url({modpackImage})">
+  <div class="modpack-caption" style="background-image: url({modpackImage})">
+      <span>{pack.name}</span>
+  </div>
+  <PackDetails pack={pack} />
 </div>
 
 <style>
 .content-body {
   flex-grow: 1;
-  background-color: var(--black-2);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 1px solid var(--gray);
   border-top-left-radius: 32px;
   border-right: none;
@@ -23,22 +25,26 @@
 
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
 }
 
 .modpack-caption {
     height: 37.04vh;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 
     display: flex;
     align-items: flex-end;
-    padding: 16px;
+    padding: 12px 16px;
 }
 
-.modpack-caption p {
+.modpack-caption span {
     color: #fff;
     font-size: 64px;
     font-weight: 500;
-    -webkit-text-stroke-width: 2px;
-    -webkit-text-stroke-color: black;
+    text-shadow: 0px 0px 4px #000;
 
     margin: 0;
 }

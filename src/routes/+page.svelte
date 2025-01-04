@@ -1,8 +1,5 @@
 <script lang="ts">
   import TopBar from '../components/TopBar.svelte';
-  import PackTabs from '../components/PackTabs.svelte';
-  import PackDetails from '../components/PackDetails.svelte';
-  import FilesSection from '../components/FilesSection.svelte';
   import SideBar from '../components/SideBar.svelte';
   import ContentBody from '../components/ContentBody.svelte';
 

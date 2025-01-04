@@ -8,75 +8,68 @@
 </script>
 
 <div class="files-section">
-<h2>Файлы</h2>
-<div class="file-counters">
-    <div class="file-category">
-    <h3>Моды</h3>
-    <p>Всего модов: {pack.modsCount}</p>
-    <button on:click={() => openFolder(pack.modsPath)}>моды</button>
+    <h2>Файлы</h2>
+    <div class="file-counters">
+        <div class="file-category">
+            <h3>Моды</h3>
+            <p>Всего модов: {pack.mods_count}</p>
+            <div class="fill-frame"></div>
+            <button on:click={() => openFolder(pack.mods_path)}>моды</button>
+        </div>
+        <div class="file-category">
+            <h3>Ресурспаки</h3>
+            <p>Всего ресурспаков: {pack.resource_packs_count}</p>
+            <div class="fill-frame"></div>
+            <button on:click={() => openFolder(pack.resource_packs_path)}>РЕСУРСПАКИ</button>
+        </div>
+        <div class="file-category">
+            <h3>Миры</h3>
+            <p>Всего миров: {pack.worlds_count}</p>
+            <div class="fill-frame"></div>
+            <button on:click={() => openFolder(pack.worlds_path)}>МИРЫ</button>
+        </div>
+        <div class="file-category">
+            <h3>Шейдеры</h3>
+            <p>Всего шейдеров: {pack.shaders_count}</p>
+            <div class="fill-frame"></div>
+            <button on:click={() => openFolder(pack.shaders_path)}>ШЕЙДЕР</button>
+        </div>
     </div>
-    <div class="file-category">
-    <h3>Ресурспаки</h3>
-    <p>Всего ресурспаков: {pack.resourcePacksCount}</p>
-    <button on:click={() => openFolder(pack.resourcePacksPath)}>РЕСУРСПАКИ</button>
-    </div>
-    <div class="file-category">
-    <h3>Миры</h3>
-    <p>Всего миров: {pack.worldsCount}</p>
-    <button on:click={() => openFolder(pack.worldsPath)}>МИРЫ</button>
-    </div>
-    <div class="file-category">
-    <h3>Шейдеры</h3>
-    <p>Всего шейдеров: {pack.shadersCount}</p>
-    <button on:click={() => openFolder(pack.shadersPath)}>ШЕЙДЕР</button>
-    </div>
-</div>
 </div>
 
 <style>
 .files-section {
+    width: 100%;
+    flex-grow: 1;
+    
     /* Auto layout */
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    padding: 0px;
     gap: 16px;
-
-    width: 1760px;
-    height: 377px;
 }
 
 .files-section h2 {
-    width: 215px;
-    height: 47px;
-
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 500;
-    font-size: 64px;
-    line-height: 77px;
-    /* identical to box height */
-    display: flex;
-    align-items: center;
-    text-align: center;
-
     color: #FFFFFF;
+    font-size: 32px;
+    font-weight: 500;
+    margin: 0;
 }
 
 .file-counters {
-    /* Auto layout */
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
-    padding: 0px;
+    align-items: stretch;
     gap: 16px;
-
-    width: 1760px;
-    height: 314px;
 }
 
 .file-category {
-    box-sizing: border-box;
+    flex: 1;
+    background-color: var(--dark);
+    border: 2px solid var(--gray-light);
+    border-radius: 16px;
 
     /* Auto layout */
     display: flex;
@@ -84,69 +77,52 @@
     align-items: flex-start;
     padding: 32px;
     gap: 16px;
-
-    width: 428px;
-    height: 314px;
-
-    /* Dark */
-    background: #101010;
-    /* Gray gray */
-    border: 2px solid #4A4A4A;
-    border-radius: 16px;
 }
 
 .file-category h3 {
-    width: 105px;
-    height: 44px;
-
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 500;
-    font-size: 36px;
-    line-height: 44px;
-    /* identical to box height */
     display: flex;
     align-items: center;
     text-align: center;
-
-    /* White */
-    color: #D9D9D9;
+    margin: 0;
+    
+    color: #fff;
+    font-size: 24px;
+    font-weight: 500;
 }
 
 .file-category p {
-    width: 219px;
-    height: 29px;
-
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 24px;
-    line-height: 29px;
-    /* identical to box height */
     display: flex;
     align-items: center;
     text-align: center;
-
-    /* White */
+    margin: 0;
+    
     color: #D9D9D9;
+    font-size: 16px;
+}
+
+.fill-frame {
+    flex-grow: 1;
 }
 
 .file-category button {
-    width: 79px;
-    height: 29px;
+    all: unset;
+    cursor: pointer;
 
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 24px;
-    line-height: 29px;
-    /* identical to box height */
+    border-radius: 8px;
+    
     display: flex;
     align-items: center;
     text-align: center;
     text-transform: uppercase;
-
-    /* Cyan green */
+    padding: 4px;
+    
     color: #14CFA3;
+    font-size: 20px;
+
+    transition: background-color 0.3s;
+}
+
+.file-category button:hover {
+    background-color: #14CFA320;
 }
 </style>

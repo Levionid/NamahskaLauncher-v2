@@ -44,7 +44,6 @@
 
 <style>
 header {
-  width: 100%;
   height: 40px;
   background-color: var(--black);
 
@@ -55,7 +54,7 @@ header {
   gap: 32px;
 
   color: #d9d9d9;
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .task-status {
@@ -64,11 +63,8 @@ header {
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  padding: 0px;
-  gap: 4px;
 
-  width: 308px;
-  height: 32px;
+  gap: 4px;
 }
 
 .task-status img {
@@ -82,11 +78,8 @@ header {
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  padding: 0px;
+  
   gap: 4px;
-
-  width: 175px;
-  height: 40px;
 }
 
 .user-info .user-avatar {

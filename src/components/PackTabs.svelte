@@ -1,25 +1,27 @@
 <script lang="ts">
-    export let packs: any[];
-    export let selectedPackIndex: number;
-    export let handlePackChange: (index: number) => void;
+  export let packs: any[];
+  export let selectedPackIndex: number;
+  export let handlePackChange: (index: number) => void;
 </script>
 
 <div class="pack-tabs">
   {#each packs as pack, index}
-    <button 
-      class="pack-tab" 
-      class:open={selectedPackIndex === index}
-      on:click={() => handlePackChange(index)}
-    >
-      <img class="pack-icon" src={pack.icon_url} alt={pack.name} />
-    </button>
+  <button 
+  class="pack-tab" 
+  class:open={selectedPackIndex === index}
+  on:click={() => handlePackChange(index)}
+  >
+  <img class="pack-icon" src={"/src/lib/images/"+pack.icon_url} alt={pack.name} />
+  </button>
   {/each}
 </div>
 
 <style>
 .pack-tabs {
   width: 80px;
-  height: 100%;
+  flex-grow: 1;
+  overflow-y: scroll;
+  overflow-x: hidden;
 
   /* Auto layout */
   display: flex;
@@ -28,13 +30,25 @@
   gap: 4px;
 }
 
+.pack-tabs::-webkit-scrollbar {
+  width: 4px;
+}
+
+.pack-tabs::-webkit-scrollbar-thumb {
+  background-color: var(--gray);
+  border-radius: 2px;
+}
+
+.pack-tabs::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gray-light);
+}
+
 .pack-tab {
   all: unset;
   cursor: pointer;
 
-  width: 64px;
-  height: 64px;
   border-radius: 8px;
+  padding: 8px;
 
   /* Auto layout */
   display: flex;
