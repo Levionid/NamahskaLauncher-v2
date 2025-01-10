@@ -6,13 +6,13 @@
 
 <div class="pack-tabs">
   {#each packs as pack, index}
-  <button 
-  class="pack-tab" 
-  class:open={selectedPackIndex === index}
-  on:click={() => handlePackChange(index)}
-  >
-  <img class="pack-icon" src={"/src/lib/images/"+pack.icon_url} alt={pack.name} />
-  </button>
+    <button 
+    class="pack-tab" 
+    class:open={selectedPackIndex === index}
+    on:click={() => handlePackChange(index)}
+    >
+    <img class="pack-icon" src="/src/lib/images/no-texture.png" alt="image1" />
+    </button>
   {/each}
 </div>
 

@@ -16,6 +16,7 @@
   const loadPacks = async () => {
     packs = await invoke('get_packs') as any[];
     selectedPack = packs[selectedPackIndex];
+    console.log(packs);
   };
 
   function handlePackChange(index: number) {
