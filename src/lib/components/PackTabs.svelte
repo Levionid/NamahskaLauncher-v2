@@ -11,7 +11,7 @@
     class:open={selectedPackIndex === index}
     on:click={() => handlePackChange(index)}
     >
-    <img class="pack-icon" src="/src/lib/images/no-texture.png" alt="image1" />
+    <img class="pack-icon" src="/src/lib/images/no-texture.png" alt="pack" />
     </button>
   {/each}
 </div>

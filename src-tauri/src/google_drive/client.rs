@@ -2,9 +2,11 @@ use reqwest::blocking::Client;
 use serde::Deserialize;
 use std::path::Path;
 use std::error::Error;
+use std::fs::File;
+use std::io::copy;
 
-const API_KEY: &str = "";
-const FOLDER_ID: &str = "";
+const API_KEY: &str = "AIzaSyANoX7JsJH-hXe9r7q7DccImDvD_zINc5Y";
+const FOLDER_ID: &str = "1cAaVaq0ufSKYQMKLEYjnoO4nTLkTozOG";
 
 #[derive(Deserialize)]
 pub struct FileInfo {
@@ -58,7 +60,9 @@ pub fn download_file(
     let response = client.get(&url).send()?;
 
     if response.status().is_success() {
-        std::fs::write(output_path, response.bytes()?)?;
+        let mut dest = File::create(output_path.join(file_name))?;
+        let content = response.bytes()?;
+        copy(&mut content.as_ref(), &mut dest)?;
         println!("Скачан файл: {}", file_name);
     } else {
         eprintln!("Ошибка при скачивании файла {}: {:?}", file_name, response.status());

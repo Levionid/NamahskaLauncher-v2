@@ -1,7 +1,7 @@
 <script lang="ts">
   import logoImage from '$lib/images/logo.png';
   import settingsSvg from '$lib/images/settings.svg';
-  import PackTabs from '../components/PackTabs.svelte';
+  import PackTabs from './PackTabs.svelte';
 
   export let packs: any[];
   export let selectedPackIndex: number;

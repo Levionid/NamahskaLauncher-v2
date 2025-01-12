@@ -4,6 +4,8 @@
   import minimizeSvg from '$lib/images/minimize.svg';
   import noTexture from '$lib/images/no-texture.png';
   import { getCurrentWindow } from '@tauri-apps/api/window';
+
+  export let main_menu: boolean = true;
   
   const appWindow = getCurrentWindow();
   
@@ -21,14 +23,16 @@
 </script>
 
 <header data-tauri-drag-region>
-  <div class="task-status">
-    <img src={noTexture} alt="Task Status" />
-    <span>Нет запущенных задач</span>
-  </div>
-  <div class="user-info">
-    <img class="user-avatar" src={noTexture} alt="Аватар" />
-    <span class="user-name">Levionid222</span>
-  </div>
+  {#if main_menu}
+    <div class="task-status">
+      <img src={noTexture} alt="Task Status" />
+      <span>Нет запущенных задач</span>
+    </div>
+    <div class="user-info">
+      <img class="user-avatar" src={noTexture} alt="Аватар" />
+      <span class="user-name">Levionid222</span>
+    </div>
+  {/if}
   <div class="window-buttons">
     <button class="window-minimize" on:click={minimize} title="Свернуть">
     <img src={minimizeSvg} alt="Minimize" />

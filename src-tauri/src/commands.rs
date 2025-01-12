@@ -1,40 +1,44 @@
 use crate::google_drive;
-use tokio::task;
 use crate::file_utils;
-
-#[derive(serde::Serialize, Clone, Debug)]
-pub struct Pack {
-    pub name: String,
-    pub id: String,
-}
+use crate::modpack_processor;
+use std::path::Path;
+use std::fs;
+use tauri::Emitter;
 
 #[tauri::command]
-pub async fn get_packs() -> Result<Vec<Pack>, String> {
-    let result = task::block_in_place(|| {
-        let mut packs: Vec<Pack> = Vec::new();
-        let folders = google_drive::list_files_in_folder("").map_err(|e| e.to_string())?;
-        
-        for folder in folders {
-            if folder.mime_type != "application/vnd.google-apps.folder" {
-                continue;
-            }
-            file_utils::create_folder(std::path::Path::new(&format!("modpacks/{}", folder.name))).ok();
+pub fn modpacks_load(window: tauri::Window) -> Result<(), Box<dyn std::error::Error>> {
+    let local_folder = Path::new("modpacks");
+    file_utils::create_folder(local_folder)?;
 
-            let pack = google_drive::find_file_in_folder(&folder.id, "pack.zip")
-                .map_err(|e| e.to_string())?
-                .ok_or("Pack not found")?;
+    let versions_path = local_folder.join("versions.json");
+    google_drive::download_versions_json(&versions_path)?;
 
-            packs.push(Pack {
-                name: folder.name,
-                id: pack.id,
-            });
+    let folders = google_drive::list_files_in_folder("")?;
+    let total_folders = folders.len();
+    let mut processed_count = 0;
+
+    for folder in folders {
+        if folder.mime_type != "application/vnd.google-apps.folder" {
+            continue;
         }
 
-        Ok(packs)
-    });
+        if let Some(file) = google_drive::find_file_in_folder(&folder.id, "pack.zip")? {
+            let result = modpack_processor::process_modpack(&file, local_folder, &folder.name);
+            if result.is_some() {
+                processed_count += 1;
+                let progress = (processed_count as f64 / total_folders as f64 * 100.0).round() as u32;
 
-    match result {
-        Ok(packs) => Ok(packs),
-        Err(e) => Err(e),
+                window.emit(
+                    "progress",
+                    serde_json::json!({
+                        "packName": folder.name,
+                        "progress": progress
+                    }),
+                )?;
+            }
+        }
     }
+
+    fs::remove_file(versions_path)?;
+    Ok(())
 }
