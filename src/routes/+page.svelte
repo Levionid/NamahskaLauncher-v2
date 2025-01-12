@@ -3,19 +3,12 @@
 
   import { onMount } from 'svelte';
   import { listen } from '@tauri-apps/api/event';
+  import type { UnlistenFn } from '@tauri-apps/api/event';
+  import { invoke } from '@tauri-apps/api/core';
+  import { goto } from '$app/navigation';
 
   let progress = 0;
   let currentPack = 'Инициализация...';
-
-  onMount(() => {
-    listen('progress', (event: { payload: string }) => {
-      const [packName, percentString] = event.payload.split(' (');
-      currentPack = packName;
-      progress = parseInt(percentString);
-    });
-  });
-
-  import { goto } from '$app/navigation';
 
   function goToMainPage() {
     history.pushState(null, '', location.href);
@@ -24,6 +17,24 @@
     };
     goto('/main');
   }
+
+  onMount(async () => {
+    listen('progress', (event: { payload: string }) => {
+      const [packName, percentString] = event.payload.split(' (');
+      currentPack = packName;
+      progress = parseInt(percentString);
+    });
+
+    const unlisten: UnlistenFn = await listen('progress', (event: { payload: { progress: number, packName: string } }) => {
+      progress = event.payload.progress;
+      currentPack = event.payload.packName;
+    });
+
+    invoke('modpacks_load').then(() => {
+      unlisten();
+      window.location.href = '/main'; // Замените '/' на маршрут основного экрана, если он другой.
+    });
+  });
 </script>
 
 <main>
@@ -33,7 +44,6 @@
     <h1>Загрузка модпаков</h1>
     <progress class="progress-bar" value={progress} max="100"></progress>
     <p>{currentPack}</p>
-    <button on:click={goToMainPage}>Перейти на главную страницу</button>
   </div>  
 </main>
 

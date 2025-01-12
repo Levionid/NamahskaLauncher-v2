@@ -59,6 +59,7 @@ pub fn download_file(
     let client = Client::new();
     let response = client.get(&url).send()?;
 
+    
     if response.status().is_success() {
         let mut dest = File::create(output_path.join(file_name))?;
         let content = response.bytes()?;
