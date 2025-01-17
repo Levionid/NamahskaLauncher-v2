@@ -26,3 +26,6 @@ tokio = { version = "1", features = ["full"] }
 zip = "2.0"
 futures = "0.3"
 rayon = "1.7"
+bytes = "1.0"
+anyhow = "1.0"
+thiserror = "2.0.11"

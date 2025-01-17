@@ -1,42 +1,39 @@
-use reqwest::blocking::Client;
-use std::fs::{self, create_dir_all, File};
-use std::io::{self, copy};
-use std::path::Path;
+use crate::modpack_processor::ModpackError;
+use std::io;
+use std::path::PathBuf;
+use tokio::fs;
 
-pub fn create_folder(path: &Path) -> io::Result<()> {
+pub fn create_folder(path: PathBuf) -> io::Result<()> {
     if !path.exists() {
-        create_dir_all(path)?;
+        std::fs::create_dir_all(path)?;
     }
     Ok(())
 }
 
-pub fn move_overrides_to_root(modpack_folder: &Path) -> io::Result<()> {
+pub async fn move_overrides_to_root(modpack_folder: PathBuf) -> io::Result<()> {
     let overrides_path = modpack_folder.join("overrides");
     if overrides_path.exists() {
-        for entry in fs::read_dir(overrides_path.clone())? {
-            let entry = entry?;
+        let mut dir = fs::read_dir(overrides_path.clone()).await?;
+        while let Some(entry) = dir.next_entry().await? {
             let dest = modpack_folder.join(entry.file_name());
-            fs::rename(entry.path(), dest)?;
+            fs::rename(entry.path(), dest).await?;
         }
-        fs::remove_dir_all(overrides_path)?;
+        fs::remove_dir_all(overrides_path).await?;
     }
     Ok(())
 }
 
-pub fn download_mod(url: &str, output_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let response = Client::new().get(url).send()?;
+pub fn download_mod(url: &str, output_path: PathBuf) -> Result<(), ModpackError> {
+    let response = reqwest::blocking::get(url)?;
     if response.status().is_success() {
+        let mut file = std::fs::File::create(output_path)?;
         let content = response.bytes()?;
-        let mut content = content.as_ref();
-        let mut dest = File::create(output_path)?;
-        copy(&mut content, &mut dest)?;
-        println!("Скачан мод: {}", output_path.display());
+        std::io::copy(&mut content.as_ref(), &mut file)?;
         Ok(())
     } else {
-        Err(format!(
-            "Ошибка загрузки с URL {}: статус {}",
-            url,
-            response.status()
-        ))?
+        Err(ModpackError::ProcessingError(format!(
+            "Failed to download from URL: {}",
+            url
+        )))
     }
 }

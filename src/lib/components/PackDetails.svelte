@@ -26,14 +26,14 @@
                 <img src={minecraftIconImage} alt="Minecraft" />
                 <div class="minecraft-version">
                     <span class="info">Minecraft</span>
-                    <span class="value">{pack.minecraft_version}</span>
+                    <span class="value">{pack.minecraft}</span>
                 </div>
             </div>
             <div class="fabric-info">
             <img src={fabricIconImage} alt="Fabric" />
             <div class="fabric-version">
                 <span class="info">Fabric</span>
-                <span class="value">{pack.fabric_version}</span>
+                <span class="value">{pack.fabric}</span>
             </div>
             </div>
             <div class="play-stats">

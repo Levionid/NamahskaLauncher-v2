@@ -1,12 +1,11 @@
 <script lang="ts">
-  import modpackImage from '$lib/images/modpack-image.png';
   import PackDetails from './PackDetails.svelte';
 
   export let pack: any;
 </script>
 
-<div class="content-body" style="background-image: url({modpackImage})">
-  <div class="modpack-caption" style="background-image: url({modpackImage})">
+<div class="content-body" style="background-image: url({`modpacks/${pack.name}/header.png`})">
+  <div class="modpack-caption" style="background-image: url({`modpacks/${pack.name}/header.png`})">
       <span>{pack.name}</span>
   </div>
   <PackDetails pack={pack} />

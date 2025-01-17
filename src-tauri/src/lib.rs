@@ -9,7 +9,7 @@ pub fn run() {
         .setup(|_app| {
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![commands::modpacks_load])
+        .invoke_handler(tauri::generate_handler![commands::modpacks_load, commands::get_packs])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
 }

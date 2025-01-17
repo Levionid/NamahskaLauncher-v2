@@ -1,62 +1,97 @@
-use std::fs;
-use serde_json::Value;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::collections::HashMap;
-use std::error::Error;
-use std::io::Error as IoError;
-
-use zip::read::ZipArchive;
 use rayon::prelude::*;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::Ordering;
+use std::sync::{atomic::AtomicUsize, Arc};
+use tauri::Emitter;
+use tauri::Window;
+use thiserror::Error;
+use tokio::fs;
+use zip::read::ZipArchive;
+use zip::result::ZipError;
 
-use crate::file_utils::{create_folder, move_overrides_to_root};
+use crate::file_utils::{create_folder, download_mod, move_overrides_to_root};
 use crate::google_drive::{download_file, FileInfo};
-use crate::file_utils;
 
-pub fn process_modpack(file: &FileInfo, local_folder: &Path, folder_name: &str) -> Option<PathBuf> {
+#[derive(Debug, Error)]
+pub enum ModpackError {
+    #[error("File I/O error: {0}")]
+    FileIO(#[from] std::io::Error),
+    #[error("JSON parsing error: {0}")]
+    JsonParsing(#[from] serde_json::Error),
+    #[error("ZIP error: {0}")]
+    Zip(#[from] ZipError),
+    #[error("Invalid modpack structure")]
+    InvalidStructure,
+    #[error("General error: {0}")]
+    GeneralError(#[from] Box<dyn std::error::Error + Send + Sync>),
+    #[error("Failed to process modpack: {0}")]
+    ProcessingError(String),
+}
+
+impl From<reqwest::Error> for ModpackError {
+    fn from(error: reqwest::Error) -> Self {
+        ModpackError::GeneralError(Box::new(error))
+    }
+}
+
+pub async fn process_modpack(
+    file: FileInfo,
+    local_folder: PathBuf,
+    window: &Window,
+) -> Result<PathBuf, ModpackError> {
+    let folder_name = file.name.trim_end_matches(".mrpack");
     let local_modpack_path = local_folder.join(folder_name);
     let local_zip_path = local_folder.join(&file.name);
-    
+
     let local_version = read_local_version(&local_modpack_path);
-    let remote_version = read_remote_versions().ok()?.get(folder_name)?.clone();
+    let remote_version = read_remote_versions()?.get(folder_name).cloned();
 
-
-    if local_version.as_deref() == Some(&remote_version) {
-        println!("Модпак {} уже актуален (версия {}).", folder_name, remote_version);
-        return Some(local_modpack_path);
-    }
-    else if !local_version.is_none() {
-        println!("Обновление модпака {} до версии {}...", folder_name, remote_version);
-    }
-
-    if let Err(e) = clean_modpack_directory(&local_modpack_path) {
-        eprintln!("Ошибка очистки папки модпака: {}", e);
-        return None;
-    }
-
-    if download_file(&file.id, &file.name, &local_zip_path).is_err()
-        || extract_zip(&local_zip_path, &local_modpack_path).is_err()
-    {
-        eprintln!("Ошибка обработки модпака {}", folder_name);
-        return None;
+    if let Some(remote_version) = remote_version {
+        if local_version.as_deref() == Some(&remote_version) {
+            println!(
+                "Модпак {} уже актуален (версия {}).",
+                folder_name, remote_version
+            );
+            return Ok(local_modpack_path);
+        } else {
+            println!(
+                "Обновление модпака {} до версии {}...",
+                folder_name, remote_version
+            );
+        }
     }
 
-    fs::remove_file(&local_zip_path).ok();
-    move_overrides_to_root(&local_modpack_path).ok();
+    clean_modpack_directory(&local_modpack_path)?;
+    println!("Скачиваем модпак: {}", folder_name);
+
+    download_file(&file.id, &file.name, local_folder.clone())
+        .await
+        .map_err(|_| {
+            ModpackError::ProcessingError(format!("Ошибка загрузки модпака {}", folder_name))
+        })?;
+
+    extract_zip(&local_zip_path, &local_modpack_path)?;
+    fs::remove_file(&local_zip_path).await?;
+
+    move_overrides_to_root(local_modpack_path.clone())
+        .await
+        .map_err(|e| ModpackError::FileIO(e))?;
 
     let modrinth_index_path = local_modpack_path.join("modrinth.index.json");
     if modrinth_index_path.exists() {
-        process_modrinth_file(&modrinth_index_path, &local_modpack_path).ok();
+        process_modrinth_file(modrinth_index_path, local_modpack_path.clone(), window)?;
     }
 
-    Some(local_modpack_path)
+    Ok(local_modpack_path)
 }
 
-fn clean_modpack_directory(modpack_path: &Path) -> Result<(), Box<dyn Error>> {
+fn clean_modpack_directory(modpack_path: &Path) -> Result<(), ModpackError> {
     for folder in ["mods", "config"] {
         let path = modpack_path.join(folder);
         if path.exists() {
-            fs::remove_dir_all(&path)?;
+            std::fs::remove_dir_all(&path)?;
             println!("Удалена папка: {}", path.display());
         }
     }
@@ -65,29 +100,26 @@ fn clean_modpack_directory(modpack_path: &Path) -> Result<(), Box<dyn Error>> {
 
 fn read_local_version(modpack_path: &Path) -> Option<String> {
     let path = modpack_path.join("modrinth.index.json");
-    if !path.exists() {
-        return None;
-    }
-    let data = fs::read_to_string(path).ok()?;
+    let data = std::fs::read_to_string(&path).ok()?;
     let json: Value = serde_json::from_str(&data).ok()?;
     json["versionId"].as_str().map(String::from)
 }
 
-fn read_remote_versions() -> Result<HashMap<String, String>, Box<dyn Error>> {
-    let path = Path::new("modpacks/versions.json");
-    let data = fs::read_to_string(path)?;
+fn read_remote_versions() -> Result<HashMap<String, String>, ModpackError> {
+    let path = Path::new("../modpacks/versions.json");
+    let data = std::fs::read_to_string(path)?;
     let json: Value = serde_json::from_str(&data)?;
     let versions = json
         .as_object()
-        .ok_or("Некорректная структура versions.json")?
+        .ok_or(ModpackError::InvalidStructure)?
         .iter()
         .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
         .collect();
     Ok(versions)
 }
 
-fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let file = fs::File::open(zip_path)?;
+fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<(), ModpackError> {
+    let file = std::fs::File::open(zip_path)?;
     let mut archive = ZipArchive::new(file)?;
 
     for i in 0..archive.len() {
@@ -95,42 +127,61 @@ fn extract_zip(zip_path: &Path, extract_to: &Path) -> Result<(), Box<dyn std::er
         let outpath = extract_to.join(file.mangled_name());
 
         if file.is_dir() {
-            create_folder(&outpath)?;
+            create_folder(outpath)?;
         } else {
             if let Some(parent) = outpath.parent() {
-                create_folder(parent)?;
+                create_folder(parent.to_path_buf())?;
             }
-            let mut outfile = fs::File::create(&outpath)?;
+            let mut outfile = std::fs::File::create(&outpath)?;
             std::io::copy(&mut file, &mut outfile)?;
         }
     }
-
     Ok(())
 }
 
 fn process_modrinth_file(
-    index_path: &Path,
-    modpack_folder: &Path,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+    index_path: PathBuf,
+    modpack_folder: PathBuf,
+    window: &Window,
+) -> Result<(), ModpackError> {
     let data = std::fs::read_to_string(index_path)?;
-    let modrinth_data: serde_json::Value = serde_json::from_str(&data)?;
-    let files = modrinth_data["files"].as_array().unwrap();
+    let modrinth_data: Value = serde_json::from_str(&data)?;
+    let files = modrinth_data["files"]
+        .as_array()
+        .ok_or(ModpackError::InvalidStructure)?;
 
-    let modpack_folder = Arc::new(modpack_folder.to_path_buf());
+    let total_files = files.len();
+    let processed_count = Arc::new(AtomicUsize::new(0));
 
     files.par_iter().try_for_each(|file| {
         let download_url = file["downloads"][0]
             .as_str()
-            .ok_or_else(|| Box::new(IoError::new(std::io::ErrorKind::InvalidData, "Invalid URL")) as Box<dyn Error + Send + Sync>)?;
+            .ok_or(ModpackError::InvalidStructure)?;
         let file_path = modpack_folder.join(file["path"].as_str().unwrap());
-        std::fs::create_dir_all(file_path.parent().unwrap())?;
+        create_folder(file_path.parent().unwrap().to_path_buf())?;
+
         println!("Скачиваем мод: {}", download_url);
-        if let Err(e) = file_utils::download_mod(download_url, &file_path) {
-            eprintln!("Ошибка скачивания мода {}: {}", download_url, e);
-        }
-        // Adding a small delay to prevent overloading the processor
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        Ok::<(), Box<dyn Error + Send + Sync>>(())
+        download_mod(download_url, file_path).map_err(|err| {
+            ModpackError::ProcessingError(format!(
+                "Ошибка загрузки модпака {}: {}",
+                modpack_folder.display(),
+                err
+            ))
+        })?;
+
+        let current_count = processed_count.fetch_add(1, Ordering::SeqCst) + 1;
+        let progress = (current_count as f64 / total_files as f64 * 100.0).round() as u32;
+
+        window
+            .emit(
+                "progress",
+                serde_json::json!({
+                    "progress": progress,
+                    "packName": file["path"].as_str().unwrap_or("Unknown")
+                }),
+            )
+            .map_err(|e| ModpackError::ProcessingError(e.to_string()))?;
+        Ok::<(), ModpackError>(())
     })?;
 
     Ok(())
