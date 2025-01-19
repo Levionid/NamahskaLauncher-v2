@@ -10,6 +10,7 @@ use thiserror::Error;
 use tokio::fs;
 use zip::read::ZipArchive;
 use zip::result::ZipError;
+use std::{thread, time};
 
 use crate::file_utils::{create_folder, download_mod, move_overrides_to_root};
 use crate::google_drive::{download_file, FileInfo};
@@ -167,6 +168,7 @@ fn process_modrinth_file(
 
     let total_files = files.len();
     let processed_count = Arc::new(AtomicUsize::new(0));
+    let delay_duration = time::Duration::from_millis(100);
 
     files.par_iter().try_for_each(|file| {
         let download_url = file["downloads"][0]
@@ -183,6 +185,8 @@ fn process_modrinth_file(
                 err
             ))
         })?;
+
+        thread::sleep(delay_duration);
 
         let current_count = processed_count.fetch_add(1, Ordering::SeqCst) + 1;
         let progress = (current_count as f64 / total_files as f64 * 100.0).round() as u32;
