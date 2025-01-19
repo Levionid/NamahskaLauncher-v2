@@ -6,6 +6,7 @@
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import { invoke } from '@tauri-apps/api/core';
   import { goto } from '$app/navigation';
+  import loadingLogo from '$lib/images/loading.gif';
 
   let progress = 0;
   let currentPack = 'Инициализация...';
@@ -19,35 +20,37 @@
 
   onMount(async () => {
     // Слушаем событие прогресса
-    const unlisten: UnlistenFn = await listen('progress', (event: { payload: { progress: number; packName: string } }) => {
-      progress = event.payload.progress; // Обновляем прогресс
-      currentPack = event.payload.packName; // Обновляем текущий пакет
-      // Меняем сообщение каждые 25% прогресса
-      messageIndex = Math.min(Math.floor(progress / 25), loadingMessages.length - 1);
-    });
+    // const unlisten: UnlistenFn = await listen('progress', (event: { payload: { progress: number; packName: string } }) => {
+    //   progress = event.payload.progress; // Обновляем прогресс
+    //   currentPack = event.payload.packName; // Обновляем текущий пакет
+    //   // Меняем сообщение каждые 25% прогресса
+    //   messageIndex = Math.min(Math.floor(progress / 25), loadingMessages.length - 1);
+    // });
+// 
+    // // Вызываем функцию загрузки модпаков
+    // invoke('modpacks_load').then(() => {
+    //   // После завершения снимаем слушатель и переходим на главную страницу
+    //   unlisten();
+    //   goto('/main');
+    // });
 
-    // Вызываем функцию загрузки модпаков
-    invoke('modpacks_load').then(() => {
-      // После завершения снимаем слушатель и переходим на главную страницу
-      unlisten();
-      goto('/main'); // Убедитесь, что маршрут правильный
-    });
+    goto('/main');
   });
 </script>
 
 <main>
-  <TopBar main_menu={false} />
+  <TopBar main_menu={false} userName="" />
 
-  <div class="loading-screen">
-    <h1 class="loading-title">Загрузка модпаков</h1>
+  <div class="loading-info">
+    <img src={loadingLogo} alt="Loading Logo" class="loading-logo" />
     <div class="progress-bar">
-      <div class="progress" style="width: {progress}%;"></div>
+        <div class="progress" style="width: {progress}%;"></div>
     </div>
-    <p class="current-pack">{currentPack}</p>
-    <div class="additional-info">
-      <p>{loadingMessages[messageIndex]}</p>
-      <p>Не выключайте приложение до завершения загрузки.</p>
-    </div>
+    <span class="current-pack">{currentPack}</span>
+  </div>
+  <div class="additional-info">
+      <span>{loadingMessages[messageIndex]}</span>
+      <span>Не выключайте приложение до завершения загрузки.</span>
   </div>
 </main>
 
@@ -60,29 +63,28 @@ main {
   background-color: var(--black);
 }
 
-.loading-screen {
+.loading-info {
+  width: 100vw;
   flex-grow: 1;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 20px;
-  position: relative;
+  gap: 12px;
 }
 
-.loading-title {
-  font-size: 2.5rem;
-  margin-bottom: 20px;
-  color: #fff;
-  animation: fadeIn 1.5s ease-in-out;
+.loading-logo {
+  width: 200px;
+  height: 200px;
+  margin-bottom: 32px;
+  animation: fadeIn 2s ease-in-out;
 }
 
 .current-pack {
-  margin-top: 15px;
   font-size: 1.2rem;
   color: var(--gray-light);
-  animation: pulse 2s infinite;
+  animation: pulse 2s infinite, fadeIn 2s ease-in-out;
 }
 
 .progress-bar {
@@ -93,44 +95,57 @@ main {
   overflow: hidden;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   margin-bottom: 20px;
+  animation: fadeIn 2s ease-in-out;
 }
 
 .progress {
   height: 100%;
-  background: var(--green);
+  background: linear-gradient(90deg, var(--green) 45%, #fff, var(--green) 75%);
   width: 0%;
   border-radius: 7.5px;
+  background-size: 400%;
+  animation: gradient 2s ease-in-out infinite;
   transition: width 0.3s ease-in-out;
 }
 
 .additional-info {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  width: 100%;
+
+  display: flex;
+  padding-bottom: 24px;
+  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   font-size: 1rem;
   color: var(--gray-light);
-  line-height: 1.5;
-  max-width: 80%;
-  text-align: center;
   animation: fadeIn 2s ease-in-out;
 }
 
 @keyframes fadeIn {
   from {
-    opacity: 0;
+      opacity: 0;
   }
   to {
-    opacity: 1;
+      opacity: 1;
   }
 }
 
 @keyframes pulse {
   0%, 100% {
-    opacity: 1;
+      opacity: 1;
   }
   50% {
-    opacity: 0.6;
+      opacity: 0.6;
+  }
+}
+
+@keyframes gradient {
+  0% {
+      background-position: 100%;
+  }
+  100% {
+      background-position: 0%;
   }
 }
 </style>

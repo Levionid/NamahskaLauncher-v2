@@ -10,6 +10,18 @@
   let selectedPack: any;
   let selectedPackIndex = 0;
 
+  let userName: string = "Username";
+
+  async function fetchNickname() {
+    try {
+      const nickname: string = await invoke("get_nickname");
+      userName = nickname;
+      console.log("Nickname получен:", userName);
+    } catch (error) {
+      console.error("Ошибка при получении ника:", error);
+    }
+  }
+
   const loadPacks = async () => {
     packs = await invoke('get_packs') as any[];
     selectedPack = packs[selectedPackIndex];
@@ -19,7 +31,10 @@
   function handlePackChange(index: number) {
     selectedPackIndex = index;
     selectedPack = packs[index];
+
   }
+
+  fetchNickname();
 
   onMount(() => {
     loadPacks();
@@ -33,9 +48,9 @@
     handlePackChange={handlePackChange} 
   />
   <div class="layout-mainbar">
-    <TopBar />
+    <TopBar userName={userName} />
     {#if selectedPack}
-      <ContentBody pack={selectedPack} />
+      <ContentBody pack={selectedPack} userName={userName} />
     {/if}
   </div>
 </main>

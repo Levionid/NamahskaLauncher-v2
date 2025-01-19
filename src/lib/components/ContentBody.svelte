@@ -1,14 +1,33 @@
 <script lang="ts">
   import PackDetails from './PackDetails.svelte';
+  import { join } from '@tauri-apps/api/path';
+  import { onMount } from 'svelte';
 
   export let pack: any;
+  export let userName: string;
+
+  let headerPath: string;
+
+  async function getHeaderPath(packName: string): Promise<string> {
+    return await join('modpacks', packName, 'header.png');
+  }
+
+  onMount(async () => {
+    headerPath = await getHeaderPath(pack.name);
+  });
 </script>
 
-<div class="content-body" style="background-image: url({`modpacks/${pack.name}/header.png`})">
-  <div class="modpack-caption" style="background-image: url({`modpacks/${pack.name}/header.png`})">
-      <span>{pack.name}</span>
+<div
+  class="content-body"
+  style="background-image: url({headerPath})"
+>
+  <div
+    class="modpack-caption"
+    style="background-image: url({headerPath})"
+  >
+    <span>{pack.name}</span>
   </div>
-  <PackDetails pack={pack} />
+  <PackDetails userName={userName} {pack} />
 </div>
 
 <style>

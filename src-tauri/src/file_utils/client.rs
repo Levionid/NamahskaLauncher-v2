@@ -16,10 +16,18 @@ pub async fn move_overrides_to_root(modpack_folder: PathBuf) -> io::Result<()> {
         let mut dir = fs::read_dir(overrides_path.clone()).await?;
         while let Some(entry) = dir.next_entry().await? {
             let dest = modpack_folder.join(entry.file_name());
+            if dest.exists() {
+                if dest.is_dir() {
+                    fs::remove_dir_all(&dest).await?;
+                } else {
+                    fs::remove_file(&dest).await?;
+                }
+            }
             fs::rename(entry.path(), dest).await?;
         }
-        fs::remove_dir_all(overrides_path).await?;
+        fs::remove_dir_all(overrides_path.clone()).await?;
     }
+    println!("Удален: {}", overrides_path.display());
     Ok(())
 }
 

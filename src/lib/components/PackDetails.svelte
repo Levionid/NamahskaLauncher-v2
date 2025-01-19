@@ -1,18 +1,82 @@
 <script lang="ts">
-  import FilesSection from './FilesSection.svelte';
-  import playSvg from '$lib/images/play.svg';
-  import minecraftIconImage from '$lib/images/minecraft-icon.png';
-  import fabricIconImage from '$lib/images/fabric-icon.png';
-  import clockSvg from '$lib/images/clock.svg';
-  import revClockSvg from '$lib/images/rev-clock.svg';
-  import folderSvg from '$lib/images/folder.svg';
-  import { invoke } from '@tauri-apps/api/core';
+    import FilesSection from './FilesSection.svelte';
+    import playSvg from '$lib/images/play.svg';
+    import minecraftIconImage from '$lib/images/minecraft-icon.png';
+    import fabricIconImage from '$lib/images/fabric-icon.png';
+    import clockSvg from '$lib/images/clock.svg';
+    import revClockSvg from '$lib/images/rev-clock.svg';
+    import folderSvg from '$lib/images/folder.svg';
+    import { invoke } from '@tauri-apps/api/core';
+    
+    export let pack: any;
+    export let userName: string;
+
+    async function saveNickname() {
+        try {
+        await invoke("set_nickname", { nickname: userName });
+        console.log("Никнейм успешно сохранен:", userName);
+        } catch (error) {
+        console.error("Ошибка при сохранении ника:", error);
+        }
+    }
   
-  export let pack: any;
+    function pluralize(value: number, one: string, few: string, many: string): string {
+        const mod10 = value % 10;
+        const mod100 = value % 100;
+        
+        if (mod10 === 1 && mod100 !== 11) return one;
+        if ((mod10 >= 2 && mod10 <= 4) && (mod100 < 10 || mod100 >= 20)) return few;
+        return many;
+    }
+
+    function formatLastPlayed(lastPlayedString: string): string {
+        const lastPlayed: number = +lastPlayedString;
+        if (lastPlayed === 0) {
+            return "Никогда";
+        }
+
+        const now = Date.now();
+        const elapsed = now - lastPlayed * 1000;
+        const seconds = Math.floor(elapsed / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        const months = Math.floor(days / 30);
+        const years = Math.floor(days / 365);
+
+        if (seconds < 60) return "Только что";
+        if (minutes < 60) return `${minutes} ${pluralize(minutes, "минута", "минуты", "минут")} назад`;
+        if (hours < 24) return `${hours} ${pluralize(hours, "час", "часа", "часов")} назад`;
+        if (days < 30) return `${days} ${pluralize(days, "день", "дня", "дней")} назад`;
+        if (months < 12) return `${months} ${pluralize(months, "месяц", "месяца", "месяцев")} назад`;
+        if (years < 10) return `${years} ${pluralize(years, "год", "года", "лет")} назад`;
+
+        const date = new Date(lastPlayed * 1000);
+        return date.toLocaleDateString("ru-RU");
+    }
   
-  async function launchPack() {
-    await invoke('launch_pack', { packName: pack.name });
-  }
+    function formatPlayTime(playTimeString: string): string {
+        const playTime: number = +playTimeString;
+        if (playTime < 60) {
+            return `${playTime}s`;
+        }
+        const minutes = playTime / 60;
+        if (minutes < 60) {
+            return `${minutes.toFixed(1)}m`;
+        }
+        const hours = minutes / 60;
+        return `${hours.toFixed(1)}h`;
+    }
+  
+    async function launchPack() {
+    try {
+        await saveNickname();
+        const result = await invoke('launch_pack', { packName: pack.name, userName: userName, minecraftVersion: pack.minecraft, fabricVersion: pack.fabric });
+        console.log("Успешный запуск:", result);
+    } catch (error) {
+        console.error("Ошибка запуска:", error);
+    }
+}
 </script>
 
 <div class="selected-pack">
@@ -40,14 +104,14 @@
             <img src={clockSvg} alt="Play Time" />
             <div class="play-time-info">
                 <span class="info">Время игры</span>
-                <span class="value">{pack.play_time}</span>
+                <span class="value">{formatPlayTime(pack.play_time)}</span>
             </div>
             </div>
             <div class="last-played">
             <img src={revClockSvg} alt="Last Played" />
             <div class="last-played-info">
                 <span class="info">Последняя игра</span>
-                <span class="value">{pack.last_played}</span>
+                <span class="value">{formatLastPlayed(pack.last_played)}</span>
             </div>
         </div>
     </div>

@@ -28,6 +28,8 @@ pub enum ModpackError {
     GeneralError(#[from] Box<dyn std::error::Error + Send + Sync>),
     #[error("Failed to process modpack: {0}")]
     ProcessingError(String),
+    #[error("Error: {0}")]
+    String(String)
 }
 
 impl From<reqwest::Error> for ModpackError {
@@ -66,14 +68,21 @@ pub async fn process_modpack(
     clean_modpack_directory(&local_modpack_path)?;
     println!("Скачиваем модпак: {}", folder_name);
 
-    download_file(&file.id, &file.name, local_folder.clone())
+    download_file(&file.id, &file.name, local_folder.clone(), window)
         .await
         .map_err(|_| {
             ModpackError::ProcessingError(format!("Ошибка загрузки модпака {}", folder_name))
         })?;
+    println!("Скачан: {}", local_modpack_path.display());
 
-    extract_zip(&local_zip_path, &local_modpack_path)?;
+    extract_zip(&local_zip_path, &local_modpack_path)
+        .map_err(|_| {
+            ModpackError::ProcessingError(format!("Ошибка распаковки модпака {}", folder_name))
+        })?;
+    println!("Распакован: {}", local_modpack_path.display());
+
     fs::remove_file(&local_zip_path).await?;
+    println!("Удален: {}", local_zip_path.display());
 
     move_overrides_to_root(local_modpack_path.clone())
         .await
@@ -95,6 +104,12 @@ fn clean_modpack_directory(modpack_path: &Path) -> Result<(), ModpackError> {
             println!("Удалена папка: {}", path.display());
         }
     }
+
+    let path = modpack_path.join("modrinth.index.json");
+    if path.exists() {
+        std::fs::remove_file(&path)?;
+        println!("Удален файл: {}", path.display());
+    }
     Ok(())
 }
 
@@ -106,7 +121,7 @@ fn read_local_version(modpack_path: &Path) -> Option<String> {
 }
 
 fn read_remote_versions() -> Result<HashMap<String, String>, ModpackError> {
-    let path = Path::new("../modpacks/versions.json");
+    let path = Path::new("modpacks/versions.json");
     let data = std::fs::read_to_string(path)?;
     let json: Value = serde_json::from_str(&data)?;
     let versions = json

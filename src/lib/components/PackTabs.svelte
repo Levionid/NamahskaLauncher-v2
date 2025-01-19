@@ -1,17 +1,36 @@
 <script lang="ts">
-  export let packs: any[];
+  import { join } from '@tauri-apps/api/path';
+  import { onMount } from 'svelte';
+
+  export let packs: { name: string; iconPath?: string }[] = [];
   export let selectedPackIndex: number;
   export let handlePackChange: (index: number) => void;
+
+  // Функция для получения полного пути к иконке
+  async function getIconPath(packName: string): Promise<string> {
+    return await join('modpacks', packName, 'icon.png');
+  }
+
+  // Загружаем пути к иконкам при монтировании компонента
+  onMount(async () => {
+    for (const pack of packs) {
+      pack.iconPath = await getIconPath(pack.name);
+    }
+  });
 </script>
 
 <div class="pack-tabs">
   {#each packs as pack, index}
     <button 
-    class="pack-tab" 
-    class:open={selectedPackIndex === index}
-    on:click={() => handlePackChange(index)}
+      class="pack-tab" 
+      class:open={selectedPackIndex === index}
+      on:click={() => handlePackChange(index)}
     >
-    <img class="pack-icon" src={`modpacks/${pack.name}/icon.png`} alt="pack" />
+      <img 
+        class="pack-icon" 
+        src={pack.iconPath} 
+        alt={pack.name} 
+      />
     </button>
   {/each}
 </div>
@@ -50,7 +69,6 @@
   border-radius: 8px;
   padding: 8px;
 
-  /* Auto layout */
   display: flex;
   flex-direction: row;
   justify-content: center;

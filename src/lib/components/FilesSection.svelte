@@ -1,10 +1,31 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { invoke } from '@tauri-apps/api/core';
+    import { writable } from 'svelte/store';
+
     export let pack: any;
-  
+
+    const modCount = writable(0);
+    const resourcePackCount = writable(0);
+    const worldCount = writable(0);
+    const shaderCount = writable(0);
+
     async function openFolder(path: string) {
-      await invoke('open_folder', { path });
+        await invoke('open_folder', { path: `modpacks\\${path}` });
     }
+
+    async function getFileCount(path: string): Promise<number> {
+        const count: number = await invoke('get_file_count', { path: `modpacks\\${path}` });
+        return count;
+    }
+
+    onMount(async () => {
+        // Обновляем состояния для каждой категории
+        modCount.set(await getFileCount(`${pack.name}\\mods`));
+        resourcePackCount.set(await getFileCount(`${pack.name}\\resoursepacks`));
+        worldCount.set(await getFileCount(`${pack.name}\\worlds`));
+        shaderCount.set(await getFileCount(`${pack.name}\\shaderpacks`));
+    });
 </script>
 
 <div class="files-section">
@@ -12,27 +33,27 @@
     <div class="file-counters">
         <div class="file-category">
             <h3>Моды</h3>
-            <p>Всего модов: {pack.mods_count}</p>
+            <p>Всего модов: {$modCount}</p>
             <div class="fill-frame"></div>
-            <button on:click={() => openFolder(pack.mods_path)}>моды</button>
+            <button on:click={() => openFolder(`${pack.name}\\mods`)}>моды</button>
         </div>
         <div class="file-category">
             <h3>Ресурспаки</h3>
-            <p>Всего ресурспаков: {pack.resource_packs_count}</p>
+            <p>Всего ресурспаков: {$resourcePackCount}</p>
             <div class="fill-frame"></div>
-            <button on:click={() => openFolder(pack.resource_packs_path)}>РЕСУРСПАКИ</button>
+            <button on:click={() => openFolder(`${pack.name}\\resoursepacks`)}>РЕСУРСПАКИ</button>
         </div>
         <div class="file-category">
             <h3>Миры</h3>
-            <p>Всего миров: {pack.worlds_count}</p>
+            <p>Всего миров: {$worldCount}</p>
             <div class="fill-frame"></div>
-            <button on:click={() => openFolder(pack.worlds_path)}>МИРЫ</button>
+            <button on:click={() => openFolder(`${pack.name}\\worlds`)}>МИРЫ</button>
         </div>
         <div class="file-category">
             <h3>Шейдеры</h3>
-            <p>Всего шейдеров: {pack.shaders_count}</p>
+            <p>Всего шейдеров: {$shaderCount}</p>
             <div class="fill-frame"></div>
-            <button on:click={() => openFolder(pack.shaders_path)}>ШЕЙДЕР</button>
+            <button on:click={() => openFolder(`${pack.name}\\shaderpacks`)}>ШЕЙДЕРЫ</button>
         </div>
     </div>
 </div>

@@ -4,6 +4,10 @@ use std::path::PathBuf;
 use thiserror::Error;
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
+use futures_util::StreamExt;
+use tauri::Window;
+use tauri::Emitter;
+use crate::modpack_processor::ModpackError;
 
 /// Константы для Google API
 const API_KEY: &str = "AIzaSyANoX7JsJH-hXe9r7q7DccImDvD_zINc5Y";
@@ -19,6 +23,8 @@ pub enum ClientError {
     JsonParsing(#[from] serde_json::Error),
     #[error("Unexpected response format")]
     UnexpectedResponse,
+    #[error("Window emit error: {0}")]
+    WindowEmit(String),
 }
 
 #[derive(Deserialize, Clone)]
@@ -65,6 +71,7 @@ pub async fn download_file(
     file_id: &str,
     file_name: &str,
     output_path: PathBuf,
+    window: &Window,
 ) -> Result<(), ClientError> {
     let url = format!(
         "https://www.googleapis.com/drive/v3/files/{}?alt=media&key={}",
@@ -75,9 +82,24 @@ pub async fn download_file(
     let response = client.get(&url).send().await?;
 
     if response.status().is_success() {
+        let total_size = response
+            .content_length()
+            .ok_or_else(|| ClientError::UnexpectedResponse)?;
+
         let mut dest = File::create(output_path.join(file_name)).await?;
-        let content = response.bytes().await?;
-        dest.write_all(&content).await?;
+        let mut stream = response.bytes_stream();
+        let mut downloaded: u64 = 0;
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            dest.write_all(&chunk).await?;
+            downloaded += chunk.len() as u64;
+
+            let progress = (downloaded as f64 / total_size as f64 * 100.0).round() as u64;
+            window_emit(window, progress, format!("Загрузка: {}", file_name).as_str())
+                .map_err(|e| ClientError::WindowEmit(format!("Failed to emit window: {}", e)))?;
+        }
+
         println!("Downloaded file: {}", file_name);
         Ok(())
     } else {
@@ -100,9 +122,22 @@ pub async fn move_overrides_to_root(modpack_folder: PathBuf) -> Result<(), Clien
     Ok(())
 }
 
-pub async fn download_versions_json(output_path: PathBuf) -> Result<(), ClientError> {
+pub async fn download_versions_json(output_path: PathBuf, window: &Window) -> Result<(), ClientError> {
     const VERSIONS_FILE_ID: &str = "11GWqfPHggIgonQYB2yUEVCiUu-fkUqXJ";
     let file_name = "versions.json";
     println!("Downloading versions.json...");
-    download_file(VERSIONS_FILE_ID, file_name, output_path).await
+    download_file(VERSIONS_FILE_ID, file_name, output_path, window).await
+}
+
+fn window_emit(window: &Window, process: u64, pack_name: &str) -> Result<(), ModpackError>{
+    window
+    .emit(
+        "progress",
+        serde_json::json!({
+            "progress": process,
+            "packName": pack_name
+        }),
+    )
+    .map_err(|e| ModpackError::ProcessingError(e.to_string()))?;
+    Ok::<(), ModpackError>(())
 }
